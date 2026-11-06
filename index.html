@@ -654,7 +654,7 @@ async function loadBirthdayPhotos() {
         const img = document.getElementById("photo" + number);
         const placeholder = document.getElementById("placeholder" + number);
 
-        img.src = data.publicUrl;
+        img.src = data.publicUrl + "?t=" + Date.now();
         img.onload = () => {
             img.style.display = "block";
             placeholder.style.display = "none";
