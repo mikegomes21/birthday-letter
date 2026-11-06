@@ -629,7 +629,7 @@ async function photoLogin() {
     });
 
     if (error) {
-        status.textContent = "Login failed. Please check your details.";
+        status.textContent = "Login failed: " + error.message;
         return;
     }
 
