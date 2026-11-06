@@ -301,6 +301,45 @@ footer {
     pointer-events: none;
     z-index: 9999;
 }
+ /* 📸 Birthday Photo Upload Styling */
+
+.photo-frame {
+    position: relative;
+    overflow: hidden;
+}
+
+.photo-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+}
+
+.upload-button {
+    margin-top: 10px;
+    padding: 9px 16px;
+    border: none;
+    border-radius: 25px;
+    background: #d4af37;
+    color: white;
+    font-family: 'Poppins', sans-serif;
+    cursor: pointer;
+}
+
+#photo-login {
+    text-align: center;
+    margin: 25px auto;
+}
+
+#photo-login input {
+    display: block;
+    width: min(90%, 300px);
+    padding: 12px;
+    margin: 10px auto;
+    border: 1px solid #d4af37;
+    border-radius: 10px;
+    box-sizing: border-box;
+}   
 </style>
 </head>
 
@@ -388,37 +427,54 @@ footer {
 
         <div class="photo-gallery">
 
-            <!-- PHOTO 1: Replace placeholder with your image -->
-
-            <div class="photo-frame">
-                <div class="photo-placeholder">
-                    <span>✧</span>
-                    Photo 1
-                </div>
-            </div>
-
-
-            <!-- PHOTO 2: Replace placeholder with your image -->
-
-            <div class="photo-frame">
-                <div class="photo-placeholder">
-                    <span>✧</span>
-                    Photo 2
-                </div>
-            </div>
-
-
-            <!-- PHOTO 3: Replace placeholder with your image -->
-
-            <div class="photo-frame">
-                <div class="photo-placeholder">
-                    <span>✧</span>
-                    Photo 3
-                </div>
-            </div>
-
+    <div class="photo-frame">
+        <img id="photo1" alt="Memory 1" style="display:none;">
+        <div class="photo-placeholder" id="placeholder1">
+            <span>✧</span>
+            Photo 1
         </div>
+        <button class="upload-button" id="uploadBtn1" style="display:none;"
+                onclick="document.getElementById('file1').click()">
+            Choose Photo
+        </button>
+        <input type="file" id="file1" accept="image/*" hidden>
+    </div>
 
+    <div class="photo-frame">
+        <img id="photo2" alt="Memory 2" style="display:none;">
+        <div class="photo-placeholder" id="placeholder2">
+            <span>✧</span>
+            Photo 2
+        </div>
+        <button class="upload-button" id="uploadBtn2" style="display:none;"
+                onclick="document.getElementById('file2').click()">
+            Choose Photo
+        </button>
+        <input type="file" id="file2" accept="image/*" hidden>
+    </div>
+
+    <div class="photo-frame">
+        <img id="photo3" alt="Memory 3" style="display:none;">
+        <div class="photo-placeholder" id="placeholder3">
+            <span>✧</span>
+            Photo 3
+        </div>
+        <button class="upload-button" id="uploadBtn3" style="display:none;"
+                onclick="document.getElementById('file3').click()">
+            Choose Photo
+        </button>
+        <input type="file" id="file3" accept="image/*" hidden>
+    </div>
+
+</div>
+
+<div id="photo-login" style="margin-top:20px;">
+    <h3>Photo Admin Login</h3>
+    <input type="email" id="adminEmail" placeholder="Your email">
+    <input type="password" id="adminPassword" placeholder="Your password">
+    <button class="gold-button" onclick="photoLogin()">Login to Upload</button>
+    <p id="photoStatus"></p>
+</div>
 
         <button class="gold-button back-button" onclick="goBack()">
             ← Back to Welcome Page
@@ -434,7 +490,7 @@ footer {
 <!-- ========================= -->
 <!-- JAVASCRIPT NAVIGATION    -->
 <!-- ========================= -->
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 
 function openLetter() {
@@ -552,6 +608,88 @@ const fireworksTimer = setInterval(() => {
         clearInterval(fireworksTimer);
     }
 }, 650);
+  // SUPABASE CONNECTION
+const SUPABASE_URL = "https://icyvczdsrnrkliiswutl.supabase.co/rest/v1/";
+const SUPABASE_KEY = "sb_publishable_KSD_0lVh-AJNEWAfvWCQ1w_HGArONCZ";
+
+const photoDB = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+);
+
+// ADMIN LOGIN
+async function photoLogin() {
+    const email = document.getElementById("adminEmail").value;
+    const password = document.getElementById("adminPassword").value;
+    const status = document.getElementById("photoStatus");
+
+    const { data, error } = await photoDB.auth.signInWithPassword({
+        email,
+        password
+    });
+
+    if (error) {
+        status.textContent = "Login failed. Please check your details.";
+        return;
+    }
+
+    status.textContent = "Welcome! You can now upload photos ❤️";
+
+    [1, 2, 3].forEach(number => {
+        document.getElementById("uploadBtn" + number).style.display = "inline-block";
+    });
+
+    await loadBirthdayPhotos();
+}
+
+// LOAD SAVED PHOTOS
+async function loadBirthdayPhotos() {
+    for (let number = 1; number <= 3; number++) {
+        const path = "photo-" + number + ".jpg";
+
+        const { data } = photoDB.storage
+            .from("birthday-photos")
+            .getPublicUrl(path);
+
+        const img = document.getElementById("photo" + number);
+        const placeholder = document.getElementById("placeholder" + number);
+
+        img.src = data.publicUrl;
+        img.onload = () => {
+            img.style.display = "block";
+            placeholder.style.display = "none";
+        };
+    }
+}
+
+// UPLOAD PHOTOS
+for (let number = 1; number <= 3; number++) {
+    document.getElementById("file" + number).addEventListener("change", async function () {
+        const file = this.files[0];
+        if (!file) return;
+
+        const status = document.getElementById("photoStatus");
+        status.textContent = "Uploading photo " + number + "...";
+
+        const { error } = await photoDB.storage
+            .from("birthday-photos")
+            .upload("photo-" + number + ".jpg", file, {
+                upsert: true,
+                contentType: file.type
+            });
+
+        if (error) {
+            status.textContent = "Upload failed: " + error.message;
+            return;
+        }
+
+        status.textContent = "Photo " + number + " uploaded successfully! ❤️";
+
+        await loadBirthdayPhotos();
+        this.value = "";
+    });
+}
+    loadBirthdayPhotos();
 </script>
 
 </body>
